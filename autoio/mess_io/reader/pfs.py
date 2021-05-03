@@ -65,7 +65,7 @@ def heat_capacity(output_str):
         :type output_str: str
         :return [temps: cp_t]:
             List of temperatures
-            Entropy
+            Heat Capacity
         :rtype: dict[float: tuple(float)]
     """
 

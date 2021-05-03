@@ -22,7 +22,7 @@ def ktp_dct(output_str, reactant, product):
         :type reactant: str
         :param product: label for the product used in the MESS output
         :type product: str
-        :rtype dict[float: (float, float)]
+        :rtype dict[str/float: (float, float)]
     """
 
     # Build the reaction string found in the MESS output

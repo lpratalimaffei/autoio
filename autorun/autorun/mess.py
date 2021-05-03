@@ -32,14 +32,8 @@ def torsions(script_str, run_dir, geo, hind_rot_str):
     )
     input_str = '\n'.join([global_pf_str, spc_str]) + '\n'
 
-    # Run the direct function
-    input_name = 'pf.inp'
-    output_name = 'pf.log'
-    output_strs = direct(script_str, run_dir, input_str,
-                         aux_dct=None,
-                         input_name=input_name,
-                         output_names=(output_name,))
-    output_str = output_strs[0]
+    # Run the direct function and returns the output
+    output_str = run_messpf(script_str, run_dir, input_str)
 
     # Read the torsional freqs and zpves
     tors_freqs = mess_io.reader.tors.analytic_frequencies(output_str)
@@ -50,10 +44,35 @@ def torsions(script_str, run_dir, geo, hind_rot_str):
     return tors_freqs, tors_zpes
 
 
+def run_messpf(script_str, run_dir, input_str):
+    """ Runs messpf with default input and output filenames
+        :param input_str: string block which constitutes the input file
+        :type input_str: str
+        :param script_str: string of bash script that contains
+            execution instructions electronic structure job
+        :type script_str: str
+        :param run_dir: name of directory to run electronic structure job
+        :type run_dir: str
+        :returns output_str: string with the content of the output file
+        :rtype: str
+    """
+    input_name = 'pf.inp'
+    output_name = 'pf.log'
+    output_strs = direct(script_str, run_dir, input_str,
+                         aux_dct=None,
+                         input_name=input_name,
+                         output_names=(output_name,))
+    output_str = output_strs[0]
+
+    return output_str
+
+
 def direct(script_str, run_dir, input_str, aux_dct=None,
            input_name=INPUT_NAME,
            output_names=OUTPUT_NAMES):
     """
+        :param input_str: string block which constitutes the input file
+        :type input_str: str
         :param aux_dct: auxiliary input strings dict[name: string]
         :type aux_dct: dict[str: str]
         :param script_str: string of bash script that contains
