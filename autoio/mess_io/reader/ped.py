@@ -118,11 +118,11 @@ def get_ped(pedoutput_str, species, energies):
         # integrate with the trapezoidal rule
         prob_en = pd.Series(probability, index=energy, dtype=float)
         prob_en = prob_en[:prob_en[prob_en < 0].index[0]]
-        prob_en = prob_en.iloc[:-1] #skip last value
+        prob_en = prob_en.iloc[:-1].sort_index() #skip last value
         # delta_E = [abs(DE) for DE in [prob_en.index[1:] - prob_en.index[:-1]]]
         # norm_factor = np.sum((prob_en.values[1:] + prob_en.values[:-1])*delta_E) / 2.
-        # integrate with trapz: put minus in front cause energies have decreasing values seo DE <0 
-        norm_factor = -np.trapz(prob_en.values, x=prob_en.index)
+        # integrate with trapz
+        norm_factor = np.trapz(prob_en.values, x=prob_en.index)
         ped_df.loc[T][P] = prob_en/norm_factor
 
     #E_units = ped_lines[species_i[0]].strip().split()[1]
@@ -156,7 +156,8 @@ def prod_ped_equip(ped_df, dof_dct, prod):
     for P in ped_df.columns:
         for T in ped_df.index:
             idx_new = ped_df[P][T].index *beta_prod
-            vals = ped_df[P][T].values
+            norm_factor = np.trapz(ped_df[P][T].values, x=idx_new)
+            vals = ped_df[P][T].values/norm_factor
             ped_df_prod[P][T] = pd.Series(vals, index=idx_new)
 
     return ped_df_prod
