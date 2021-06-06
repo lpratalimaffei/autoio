@@ -37,7 +37,7 @@ from mess_io.writer._monte_carlo import mc_data
 from mess_io.writer._monte_carlo import fluxional_mode
 from mess_io.writer._sec import rxnchan_header_str
 from mess_io.writer._sec import species_separation_str
-
+from mess_io.writer import hoten
 
 __all__ = [
     # global writers
@@ -78,5 +78,6 @@ __all__ = [
     'fluxional_mode',
     # section library
     'rxnchan_header_str',
-    'species_separation_str'
+    'species_separation_str',
+    'hoten'
 ]
