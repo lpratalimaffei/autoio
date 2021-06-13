@@ -12,18 +12,21 @@ DEFAULT_ARRFIT_DCT = {
     'dblcheck': 'max'
 }
 
-def rename_ktp_dct(ktp_dct, rctname, radname):
+def rename_ktp_dct(ktp_dct, pedspecies, label_dct):
     """ rename ktp dictionary with rxn names
         ktp_dct.keys(): sp
         renamed_ktp_dct.keys(): rctname=>sp
-        if sp in radname, the reaction is reversible =
-        TO REVISE WITH THE NAME OF THE SECOND REACTANT
+        if sp is the origina produce, the reaction is reversible =
     """
     rename_ktp_dct = {}
-
+    print(label_dct, pedspecies)
+    reacs = label_dct[pedspecies[0]]
+    prods = label_dct[pedspecies[1]]
+    prod1 = prods.split('+')[0]
     for sp in ktp_dct.keys():
-        linker = (sp in radname)*'=' + (sp not in radname)*'=>'
-        newkey = linker.join([rctname, sp])
+        linker = (label_dct[sp] == prod1)*'=' + (label_dct[sp] != prod1)*'=>'
+        prodsnew = prods.replace(prod1, label_dct[sp])
+        newkey = linker.join([reacs, prodsnew])
         rename_ktp_dct[newkey] = ktp_dct[sp]
 
     return rename_ktp_dct

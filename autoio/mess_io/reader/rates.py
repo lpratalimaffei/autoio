@@ -392,7 +392,7 @@ def _labels_input_string(inp_str):
 
 
 def _labels_output_string(out_str):
-    """ Read the labels out of a MESS input file
+    """ Read the labels out of a MESS output file
     """
 
     lbls = []
