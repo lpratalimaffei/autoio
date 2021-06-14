@@ -37,7 +37,8 @@ from mess_io.writer._monte_carlo import mc_species
 from mess_io.writer._monte_carlo import mc_data
 from mess_io.writer._monte_carlo import fluxional_mode
 from mess_io.writer._sec import SPC_SEP_STR
-
+from mess_io.writer._hoten import rename_ktp_dct
+from mess_io.writer._hoten import fit_ktp_dct
 
 __all__ = [
     # global writers
@@ -80,4 +81,6 @@ __all__ = [
     'fluxional_mode',
     # section library
     'SPC_SEP_STR'
+    'rename_ktp_dct',
+    'fit_ktp_dct'
 ]
