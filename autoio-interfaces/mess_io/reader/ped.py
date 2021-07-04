@@ -87,6 +87,7 @@ def get_ped(pedoutput_str, species, energies):
         :rtype ped_df: dataframe(series(float))
     """
     species_string = species[0] + '->' + species[1]
+    print(species_string)
     ped_lines = pedoutput_str.splitlines()
     # 0th of the energy: products energy
     E0 = energies[species[0]]-energies[species[1]]
@@ -110,14 +111,16 @@ def get_ped(pedoutput_str, species, energies):
     for i in np.arange(0, len(species_i)):
         P, T, i_in, i_fin = [pressure_lst[i],
                                temperature_lst[i], species_i[i], final_i[i]]
-
         energy, probability = np.array(
             [line.strip().split() for line in ped_lines[i_in:i_fin]], dtype=float).T
         energy = energy + E0 # rescale energy
         # build the series and put in dataframe after removing negative probs and renormalizing
         # integrate with the trapezoidal rule
         prob_en = pd.Series(probability, index=energy, dtype=float)
-        prob_en = prob_en[:prob_en[prob_en < 0].index[0]]
+        if len(prob_en[prob_en < 0]) > 0:
+            # if there are negative values of the probability: remove them            
+            prob_en = prob_en[:prob_en[prob_en < 0].index[0]]
+
         prob_en = prob_en.iloc[:-1].sort_index() #skip last value
         # delta_E = [abs(DE) for DE in [prob_en.index[1:] - prob_en.index[:-1]]]
         # norm_factor = np.sum((prob_en.values[1:] + prob_en.values[:-1])*delta_E) / 2.
@@ -144,6 +147,7 @@ def prod_ped_equip(ped_df, dof_dct, prod):
     """
     # derive the energy fraction from the equipartition theorem
     N_dof_prod = dof_dct[prod]
+    print(N_dof_prod)
     dof_dct.pop(prod)
     N_dof_rest = list(dof_dct.values())[0]
     beta_prod = (N_dof_prod+3/2)/(N_dof_prod+N_dof_rest+9/2)
