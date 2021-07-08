@@ -4,9 +4,10 @@
   corresponding to a given reaction.
 """
 
-import numpy
+import numpy as np
+import pandas as pd
 from phydat import phycon
-
+from mess_io.reader import util
 
 # Functions for getting k(T,P) values from main MESS `RateOut` file
 def ktp_dct(output_str, reactant, product):
@@ -105,7 +106,7 @@ def _pdep_kts(out_lines, reaction, pressure):
                 if reaction in out_lines[j]:
                     mess_press = float(out_lines[j-2].strip().split()[2])
                     mess_punit = out_lines[j-2].strip().split()[3]
-                    if numpy.isclose(mess_press, pressure):
+                    if np.isclose(mess_press, pressure):
                         conv_pressure = _convert_pressure(pressure, mess_punit)
                         pdep_dct[conv_pressure] = _parse_rate_constants(
                             out_lines, j, reaction)
@@ -190,6 +191,29 @@ def ke_dct(output_str, reactant, product):
 
     return _ke_dct
 
+# Functions for getting fragment density of states values from main MESS `MicroRateOut` file
+def dos_rovib(ke_ped_out):
+    """ Read the microcanonical pedoutput file and extracts rovibrational density
+        of states of each fragment as a function of the energy
+
+        :param ke_ped_out: string of lines of ke.out file
+        :type ke_ped_out: str
+
+        :return dos_df: dataframe(columns:prod1, prod2, rows:energy [kcal/mol]) 
+                        with the density of states
+        :rtype dos_df: dataframe(float)
+    """
+    # find where data of interest are
+    ke_lines = ke_ped_out.splitlines()
+    i_in = util.where_in('Bimolecular fragments density of states:', ke_lines)[0]+2
+    labels = ke_lines[i_in-1].strip().split()[2:]
+    energy, dosf1, dosf2 = np.array(
+        [line.strip().split() for line in ke_lines[i_in:]], dtype=float).T
+    dos_all = np.concatenate((dosf1[:, np.newaxis], dosf2[:, np.newaxis]), axis=1)
+    dos_rovib_df = pd.DataFrame(dos_all, index=energy, columns=labels)
+
+    # units: kcal/mol, and for dos mol/kcal
+    return dos_rovib_df 
 
 # Functions to read temperatures and pressures
 def temperatures(file_str, mess_file='out'):
