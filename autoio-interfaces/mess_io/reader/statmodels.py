@@ -332,7 +332,7 @@ class ped_models:
 
         Emax = max(self.ped_df[self.ped_df.columns[-1]]
                    [self.ped_df.sort_index().index[-1]].index)
-        # just to save stuff, remove later
+                   
         Evect_full = np.linspace(0, round(Emax, 1), num=(round(Emax-0)/0.1))
         for P in self.ped_df.columns:
 
