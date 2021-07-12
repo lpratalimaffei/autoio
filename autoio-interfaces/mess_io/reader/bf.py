@@ -67,7 +67,7 @@ def bf_tp_df_full(prod_name, ped_df_prod, hoten_dct):
             # reduce the energy range where you have some significant ped probability
             ped = ped[ped > 0.001]
             hoten = hoten[hoten <= ped.index[-1]]
-            if len(hoten) >= 3:
+            if len(hoten) >= 4:
                 E_vect = ped.index
                 ped_vect = ped.values
                 # Series to allocate
@@ -90,7 +90,7 @@ def bf_tp_df_full(prod_name, ped_df_prod, hoten_dct):
     return bf_tp_df
 
 
-def bf_tp_dct_filter(bf_tp_df, bf_threshold, T_all=None):
+def bf_tp_dct_filter(bf_tp_df, bf_threshold, model, T_all=None):
     """
     Converts the dataframe of hot branching fractions to dictionary and excludes invalid BFs
         :param bf_tp_df: branching fractions at T,P for each product for the selected hotspecies
@@ -111,6 +111,9 @@ def bf_tp_dct_filter(bf_tp_df, bf_threshold, T_all=None):
     for sp in allspecies:
         N_data_highenough = 0
         bf_tp_dct_i = {}
+        bf_df_sp_i = pd.DataFrame(
+            np.zeros((len(T_lst), len(P_lst))), index=T_lst, columns=P_lst)
+
         for P in P_lst:
             bf_T = []
             T_new = []
@@ -119,6 +122,7 @@ def bf_tp_dct_filter(bf_tp_df, bf_threshold, T_all=None):
                 if bf >= 1e-10:  # avoid too small values
                     T_new.append(T)
                     bf_T.append(bf)
+                    bf_df_sp_i[P][T] = bf
                 # check if values is high enough
                 if bf >= bf_threshold:
                     N_data_highenough += 1
@@ -133,6 +137,14 @@ def bf_tp_dct_filter(bf_tp_df, bf_threshold, T_all=None):
 
         if N_data_highenough > 0:
             bf_tp_dct_out[sp] = bf_tp_dct_i
+
+        # write file with the BFs
+        bf_df_sp_i = bf_df_sp_i.reset_index()
+        header_label = np.array(bf_df_sp_i.columns, dtype=str)
+        header_label[0] = 'T [K]'
+        labels = '\t\t'.join(header_label)
+        np.savetxt('bf_{}_{}.txt'.format(sp, model), bf_df_sp_i.values,
+                   delimiter='\t', header=labels, fmt='%1.2e')
 
     return bf_tp_dct_out
 
@@ -184,6 +196,7 @@ def merge_bf_rates(bf_tp_dct, ktp_dct):
         new_ktp_dct[sp] = bf_ktp_dct
 
     return new_ktp_dct
+
 
 def extend_dct_withP(P_all, P_red, dct_toextend):
     """ Takes a dictionary with pressure keys and extends it:
