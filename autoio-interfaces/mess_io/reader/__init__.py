@@ -14,7 +14,7 @@ from mess_io.reader import ped
 from mess_io.reader import hotenergies
 from mess_io.reader import util
 from mess_io.reader import bf
-
+from mess_io.reader import statmodels
 __all__ = [
     'pfs',
     'rates',
@@ -26,5 +26,6 @@ __all__ = [
     'ped',
     'hotenergies',
     'util',
-    'bf'
+    'bf',
+    'statmodels'
 ]
