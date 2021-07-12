@@ -282,16 +282,17 @@ def energies(output_str):
     return species_en_S, barriers_en_S
 
 
-def barriers(barriers_en_S, reac, prod):
-    """ Extract fw and bw energy barrier for reaction reac->prod 
+def barriers(barriers_en_S, species_en_S, reac, prod):
+    """ Extract fw and bw energy barrier for reaction reac->prod
+        if barrier not found, save the DE of the reaction
     """
     findreac = [reac == key[0] for key in barriers_en_S.keys()]
     findprod = [prod == key[1] for key in barriers_en_S.keys()]
-    
+
     if (reac, prod) in barriers_en_S.keys():
         DE_FW = barriers_en_S[(reac, prod)]
         DW_BW = barriers_en_S[(prod, reac)]
-        
+
     elif any(findreac) and any(findprod):
         # check if you have reac->wr->wp->prod like in habs
         connect_reac = np.array(list(barriers_en_S.keys()))[findreac]
@@ -299,17 +300,31 @@ def barriers(barriers_en_S, reac, prod):
         connect_prod = np.array(list(barriers_en_S.keys()))[findprod]
         fromprod = [r[0] for r in connect_prod]
         possible_index = [(p, r) for p in fromreac for r in fromprod]
+        if len(possible_index) == 1:
+            possible_index = [possible_index]
+        flag = 0
         for idx in possible_index:
             try:
                 DE = barriers_en_S[idx]
                 DE_FW = DE - barriers_en_S[(idx[0], reac)]
                 DE_BW = barriers_en_S[(idx[1], idx[0])] - \
                     barriers_en_S[(idx[1], prod)]
+                flag = 1
             except KeyError:
                 continue
 
+        if flag == 0:
+            print(
+                '*Warning: indirect connection between {} and {} not found'.format(reac, prod))
+            print('saving the DE instead \n')
+            try:
+                DE_FW = species_en_S[prod] - species_en_S[reac]
+                DE_BW = species_en_S[reac] - species_en_S[prod]
+            except KeyError:
+                print('*Error: species {} and {} not found. now exiting \n'.format(reac, prod))
     else:
-        print('Error: connection between {} and {} not found'.format(reac, prod))
+        print('*Error: species {} and {} not found'.format(reac, prod))
+        exit()
 
     return DE_FW, DE_BW
 # Functions to read temperatures and pressures
