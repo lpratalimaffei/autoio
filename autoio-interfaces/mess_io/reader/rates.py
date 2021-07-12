@@ -300,17 +300,17 @@ def barriers(barriers_en_S, species_en_S, reac, prod):
         connect_prod = np.array(list(barriers_en_S.keys()))[findprod]
         fromprod = [r[0] for r in connect_prod]
         possible_index = [(p, r) for p in fromreac for r in fromprod]
-        if len(possible_index) == 1:
-            possible_index = [possible_index]
+
         flag = 0
         for idx in possible_index:
+
             try:
                 DE = barriers_en_S[idx]
                 DE_FW = DE - barriers_en_S[(idx[0], reac)]
                 DE_BW = barriers_en_S[(idx[1], idx[0])] - \
                     barriers_en_S[(idx[1], prod)]
                 flag = 1
-            except KeyError:
+            except (KeyError, ValueError):
                 continue
 
         if flag == 0:
