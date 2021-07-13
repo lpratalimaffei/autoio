@@ -62,7 +62,7 @@ def convolve_f(f1, f2, vect):
 
 class ped_models:
 
-    def __init__(self, ped_df, prod1, dos_df=None, mw_dct=None, dof_dct=None, E_BW=None):
+    def __init__(self, ped_df, prod1, dos_df=None, dof_info=None, E_BW=None):
         """ initialize variables
             :param ped_df: dataframe(columns:P, rows:T) with the Series of energy distrib
             :type ped_df: dataframe(series(float))
@@ -75,14 +75,18 @@ class ped_models:
         """
         self.ped_df = ped_df
         self.dos_df = dos_df
-        self.mw_dct = mw_dct
-        self.dof_dct = dof_dct
+
         self.E_BW = E_BW
         self.prod1 = prod1
         self.prod2 = self.dos_df.columns[self.dos_df.columns != self.prod1][0]
-        self.N_dof_prod = dof_dct[self.prod1]
-        self.N_dof_prod2 = dof_dct[self.prod2]
-        self.N_dof_TS = dof_dct['TS']
+        self.dof_info = dof_info
+
+        try:
+            self.mw_dct = dof_info['mw']
+            self.vibdof_dct = dof_info['vib dof']
+            self.rotdof_dct = dof_info['rot dof']
+        except TypeError:
+            pass                        
 
         self.models_dct = {
             'equip_simple': self.equip_simple,
@@ -106,20 +110,33 @@ class ped_models:
                 '\n'.join(self.models_dct.keys())))
             exit()
 
+    def get_dofs(self):
+        """ get dofs from dof_info
+        """
+        try:
+            self.dof_info.empty
+        except AttributeError:
+            print('Error: DOFs not defined, now exiting\n')
+            sys.exit()
+
+        # derive the energy fraction from the equipartition theorem
+        vibdof_prod1, vibdof_prod2 = self.vibdof_dct[[self.prod1, self.prod2]]
+        rotdof_prod1, rotdof_prod2 = self.rotdof_dct[[self.prod1, self.prod2]]
+        vibdof_ts = self.vibdof_dct['TS']
+        rotdof_ts = self.rotdof_dct['TS']
+
+        return vibdof_prod1, rotdof_prod1, vibdof_prod2, rotdof_prod2, vibdof_ts, rotdof_ts
+
     def equip_simple(self):
         """ Derive the energy distribution of 1 product from the energy equipartition theorem
 
             :return ped_df_prod: energy distribution of the product prod
             :rtype: dataframe(series(float))
         """
-        if self.N_dof_prod == None or self.N_dof_prod2 == None:
-            print('Error: DOFs not defined, now exiting\n')
-            sys.exit()
+        vibdof_prod1, rotdof_prod1, vibdof_prod2, rotdof_prod2, _, _ = self.get_dofs()
 
-        # derive the energy fraction from the equipartition theorem
-        print('dof of the fragment {}: {}'.format(self.prod1, self.N_dof_prod))
-        beta_prod = (self.N_dof_prod+3/2) / \
-            (self.N_dof_prod+self.N_dof_prod2+9/2)
+        beta_prod = (vibdof_prod1+rotdof_prod1/2) / \
+            (vibdof_prod1+vibdof_prod2+(3+rotdof_prod1+rotdof_prod2)/2)
         # 3/2: 1/2kbT for each rotation, no trasl (ts trasl energy preserved)
         # 9/2: 1/2kbT*6 rotational dofs for products, +3 for relative trasl
         print(
@@ -160,8 +177,8 @@ class ped_models:
 
             mi = np.array(phi*E, dtype=float)
             # correlation from Danilack Goldsmith - I add the additional fraction of energy transferred to the products
-            sigma = np.array(0.87+0.04*(E_BW+phi*(E-E_BW)), dtype=float)
-            # sigma = 0.87+0.04*E_BW
+            # sigma = np.array(0.87+0.04*(E_BW+phi*(E-E_BW)), dtype=float)
+            sigma = 0.87+0.04*E_BW
             num = np.exp(-((E1-mi)/(2**0.5)/sigma)**2)
             den = np.power(2*np.pi, 0.5)*sigma
 
@@ -234,14 +251,13 @@ class ped_models:
             :return ped_df_prod: energy distribution of the product prod
             :rtype: dataframe(series(float))
         """
-        if self.N_dof_prod == None or self.N_dof_prod2 == None:
-            print('Error: DOFs not defined, now exiting\n')
-            sys.exit()
 
-        # derive the energy fraction from the equipartition theorem
-        print('dof of the fragment {}: {}'.format(self.prod1, self.N_dof_prod))
-        phi_prod = (self.N_dof_prod+3/2) / \
-            (self.N_dof_prod+self.N_dof_prod2+9/2)
+        vibdof_prod1, rotdof_prod1, vibdof_prod2, rotdof_prod2, _, _ = self.get_dofs()
+        
+        phi_prod = (vibdof_prod1+rotdof_prod1/2) / \
+            (vibdof_prod1+vibdof_prod2+(3+rotdof_prod1+rotdof_prod2)/2)
+        print(
+            'fraction of energy transferred to products phi: {:.2f}'.format(phi_prod))
 
         ped_df_prod = self.P_E1_phi(phi_prod)
 
@@ -254,9 +270,9 @@ class ped_models:
             :return ped_df_prod: energy distribution of the product prod
             :rtype: dataframe(series(float))
         """
-
+        vibdof_prod1, _, _, _, vibdof_ts, _ = self.get_dofs()
         # derive the energy fraction phi
-        phi1a = self.N_dof_prod/self.N_dof_TS
+        phi1a = vibdof_prod1/vibdof_ts
         print(
             'fraction of energy transferred to products phi1a: {:.2f}'.format(phi1a))
         # rescale all energies with beta: allocate values in new dataframe
@@ -271,8 +287,9 @@ class ped_models:
             :return ped_df_prod: energy distribution of the product prod
             :rtype: dataframe(series(float))
         """
+        vibdof_prod1, rotdof_prod1, _, _, vibdof_ts, rotdof_ts = self.get_dofs()
         # derive the energy fraction phi
-        phi2a = (self.N_dof_prod+3)/(self.N_dof_TS+3)
+        phi2a = (vibdof_prod1+(3+rotdof_prod1)/2)/(vibdof_ts+(3+rotdof_ts)/2)
         print(
             'fraction of energy transferred to products phi2a: {:.2f}'.format(phi2a))
         ped_df_prod = self.P_E1_phi(phi2a)
@@ -287,8 +304,9 @@ class ped_models:
             :rtype: dataframe(series(float))
         """
         # derive the energy fraction phi
-
-        phi3a = (self.N_dof_prod+3)/(self.N_dof_prod+self.N_dof_prod2+9)
+        vibdof_prod1, rotdof_prod1, vibdof_prod2, rotdof_prod2, _, _ = self.get_dofs()
+        phi3a = (vibdof_prod1+(3+rotdof_prod1)/2) / \
+            (vibdof_prod1+vibdof_prod2+(3+3+rotdof_prod1+rotdof_prod2)/2+3)
         print(
             'fraction of energy transferred to products phi3a: {:.2f}'.format(phi3a))
         ped_df_prod = self.P_E1_phi(phi3a)
@@ -308,8 +326,10 @@ class ped_models:
         except AttributeError:
             print('*Error: dos not defined, exiting now \n')
             sys.exit()
-        if self.mw_dct == None:
-            print('*Error: mw not defined, exiting now \n')
+        try:
+            self.dof_info.empty
+        except AttributeError:
+            print('*Error: dof not defined, exiting now \n')
             sys.exit()
 
         # preallocations
@@ -332,7 +352,7 @@ class ped_models:
 
         Emax = max(self.ped_df[self.ped_df.columns[-1]]
                    [self.ped_df.sort_index().index[-1]].index)
-                   
+
         Evect_full = np.linspace(0, round(Emax, 1), num=(round(Emax-0)/0.1))
         for P in self.ped_df.columns:
 
@@ -361,8 +381,9 @@ class ped_models:
                 P_E1 = pd.Series(index=E[1:-2], dtype=float)
 
                 # functions to be used in all loops
-                rho_rovib_prod1 = pd.Series(f_rho_rovib_prod1(E), index = E)
-                rho_non1 = pd.Series(convolve_f(f_rho_rovib_prod2, f_rhotrasl, E), index=E)
+                rho_rovib_prod1 = pd.Series(f_rho_rovib_prod1(E), index=E)
+                rho_non1 = pd.Series(convolve_f(
+                    f_rho_rovib_prod2, f_rhotrasl, E), index=E)
                 ped_E = pd.Series(f_ped_E(E), index=E)
 
                 for e in E[3:]:

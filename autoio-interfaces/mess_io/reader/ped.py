@@ -116,16 +116,15 @@ def ped_dof_MW(block):
     """ Gets the N of degrees of freedom and MW of each species
         :param block: bimol species of which you want the dofs
         :type block: list(str1, str2)
-        :return dof_dct, MW_dct: dct with dofs and molecular weigths 
+        :return dof_dct, rot_dct, MW_dct: dct with dofs and molecular weigths 
                     {prodi: Ni}
-        :rtype: dct
+        :rtype: dataframe(index=species, columns=['vib dof', 'rot dof', 'mw'])
     """
-
-    dof_dct = {}
-    MW_dct = {}
+    info_array = np.zeros((3, 3))
+    keys = []
     atoms_ts = 0
     # extract N of dofs and MW
-    for block_i in block:
+    for i, block_i in enumerate(block):
         info = block_i.splitlines()
         where_name = util.where_in('Species', info)[0]
         where_hind = util.where_in('Hindered', info)
@@ -134,14 +133,21 @@ def ped_dof_MW(block):
         atoms_ts += N_atoms
 
         key = info[where_name].strip().split()[1]
+        keys.append(key)
         try:
             where_freq = util.where_in('Frequencies', info)[0]
             N_dof = int(info[where_freq].strip().split()[1]) + len(where_hind)
+            if 3*N_atoms - N_dof == 6:
+                rot_dof = 3
+            else:
+                rot_dof = 2
         except IndexError:
             # if 1 atom only: no 'Frequencies', set to 0
             N_dof = 0
+            rot_dof = 0
         # this allows to get 3N-5 or 3N-6 without analyzing the geometry
-        dof_dct[key] = N_dof
+        info_array[i, 0] = N_dof
+        info_array[i, 1] = rot_dof
 
         # MW from type of atoms:
         geom_in = where_geom+1
@@ -149,16 +155,21 @@ def ped_dof_MW(block):
         atoms_array = np.array([geomline.strip().split()[0]
                                 for geomline in info[geom_in:geom_fin]])
 
-        MW_dct[key] = np.sum(np.array([MW_dct_elements[at]
-                                       for at in atoms_array], dtype=float))
+        mw = np.sum(np.array([MW_dct_elements[at]
+                              for at in atoms_array], dtype=float))
+        info_array[i, 2] = mw
 
-    # assume there are no linear TSs; account also for translation
-    dof_dct['TS'] = 3*atoms_ts - 6
+    keys.append('TS')
+    # assume there are no linear TSs
+    info_array[2, :] = [3*atoms_ts - 7, 3, info_array[0, 2]+info_array[1, 2]]
 
-    return dof_dct, MW_dct
+    dof_info = pd.DataFrame(info_array, index=keys, columns=[
+                            'vib dof', 'rot dof', 'mw'])
+    print(dof_info)
+    return dof_info
 
 
-def ped_prod1(ped_df, prod1, modeltype, dos_df=None, mw_dct=None, dof_dct=None, E_BW=None):
+def ped_prod1(ped_df, prod1, modeltype, dos_df=None, dof_info=None, E_BW=None):
     """ call ped_models class in statmodels and compute P(E1)
 
         :param ped_df: dataframe(columns:P, rows:T) with the Series of energy distrib
@@ -182,7 +193,7 @@ def ped_prod1(ped_df, prod1, modeltype, dos_df=None, mw_dct=None, dof_dct=None, 
 
     # call class
     ped_prod1_fct = statmodels.ped_models(
-        ped_df, dos_df=dos_df, mw_dct=mw_dct, dof_dct=dof_dct, E_BW=E_BW, prod1=prod1)
+        ped_df, dos_df=dos_df, dof_info=dof_info, E_BW=E_BW, prod1=prod1)
     P_E1_prod1 = ped_prod1_fct.compute_ped(modeltype)
 
     return P_E1_prod1
