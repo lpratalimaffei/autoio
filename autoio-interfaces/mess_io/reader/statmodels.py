@@ -177,8 +177,8 @@ class ped_models:
 
             mi = np.array(phi*E, dtype=float)
             # correlation from Danilack Goldsmith - I add the additional fraction of energy transferred to the products
-            # sigma = np.array(0.87+0.04*(E_BW+phi*(E-E_BW)), dtype=float)
-            sigma = 0.87+0.04*E_BW
+            sigma = np.array(0.87+0.04*(E_BW+phi*(E-E_BW)), dtype=float)
+            # sigma = 0.87+0.04*E_BW
             num = np.exp(-((E1-mi)/(2**0.5)/sigma)**2)
             den = np.power(2*np.pi, 0.5)*sigma
 
@@ -195,43 +195,40 @@ class ped_models:
         # preallocations
         ped_df_prod = pd.DataFrame(index=self.ped_df.index,
                                    columns=self.ped_df.columns, dtype=object)
+        ped_en = self.ped_df[self.ped_df.columns[-1]] \
+                   [self.ped_df.sort_index().index[-1]].index
+        ped_en2 = self.ped_df[self.ped_df.columns[0]] \
+            [self.ped_df.sort_index().index[0]].index
+        Emax = max(ped_en)
+        ped_step = ped_en2[-1]-ped_en2[-2]
 
-        Emax = max(self.ped_df[self.ped_df.columns[-1]]
-                   [self.ped_df.sort_index().index[-1]].index)
         # just to save stuff, remove later
 
         for P in self.ped_df.columns:
 
             P_E1_df = pd.DataFrame(
-                index=np.arange(0.0, round(Emax, 1), 0.1).round(
-                    decimals=1), columns=self.ped_df.sort_index().index, dtype=float)
-            # just to save stuff, remove later
+                index=np.arange(0.0, round(Emax, 2), ped_step/10).round(
+                    decimals=2), columns=self.ped_df.sort_index().index, dtype=float)
 
             for T in self.ped_df.sort_index().index:
                 E = self.ped_df[P][T].index
-                ped_E = self.ped_df[P][T][E].values
-                f_ped_E = interp1d(E, ped_E, kind='cubic',
-                                   fill_value='extrapolate')
-                E = np.arange(0.0, round(max(E), 1), 0.1).round(
-                    decimals=1)  # default step size 0.1
-                P_E1 = pd.Series(index=E[1:-1], dtype=float)
+                ped_E = self.ped_df[P][T].values
+                E1_vect = np.arange(0.0, round(max(E), 2), ped_step/10).round(
+                    decimals=2)
+                P_E1 = pd.Series(index=E1_vect[1:-1], dtype=float)
 
-                for E1 in E[1:-1]:
-
-                    P_E1E = norm_distr(E1, E[1:-1], phi, self.E_BW)
-                    # compute P(E1): you need to derive Pped[Eint]
-                    P_ped = f_ped_E(E[1:-1])
-                    P_E1Etot_P_ped = P_E1E*P_ped
-                    P_E1[E1] = np.trapz(P_E1Etot_P_ped, E[1:-1])
+                for E1 in E1_vect[1:-1]:
+                    P_E1E = norm_distr(E1, E, phi, self.E_BW)
+                    P_E1Etot_P_ped = P_E1E*ped_E
+                    P_E1[E1] = np.trapz(P_E1Etot_P_ped, E)
 
                 norm_factor_P_E1 = np.trapz(
-                    P_E1[E[1:-1]].values, x=E[1:-1])
+                    P_E1[E1_vect[1:-1]].values, x=E1_vect[1:-1])
                 P_E1_norm = P_E1/norm_factor_P_E1
                 ped_df_prod[P][T] = P_E1_norm
+                P_E1_df[T][E1_vect[1:-1]] = P_E1_norm
 
-                P_E1_df[T][E[1:-1]] = P_E1_norm
-
-                print(P, T, max(E[1:-1]),
+                print(P, T, max(E1_vect[1:-1]),
                       P_E1_norm.idxmax(), P_E1_norm.max(), '\n')
                 #print(np.trapz(ped_df_prod[P][T], x=E1_vect[1:-1]))
 
@@ -244,6 +241,7 @@ class ped_models:
                        delimiter='\t', header=labels, fmt='%1.2e')
 
         return ped_df_prod
+
 
     def equip_phi(self):
         """ Derive the energy distribution of 1 product from the energy equipartition theorem
