@@ -288,30 +288,45 @@ def barriers(barriers_en_S, species_en_S, reac, prod):
     """
     findreac = [reac == key[0] for key in barriers_en_S.keys()]
     findprod = [prod == key[1] for key in barriers_en_S.keys()]
+    findreac_rev = [reac == key[1] for key in barriers_en_S.keys()]
+    findprod_rev = [prod == key[0] for key in barriers_en_S.keys()]
 
     if (reac, prod) in barriers_en_S.keys():
         DE_FW = barriers_en_S[(reac, prod)]
         DW_BW = barriers_en_S[(prod, reac)]
 
-    elif any(findreac) and any(findprod):
+    elif (any(findreac) or any(findreac_rev)) and (any(findprod) or any(findprod_rev)):
         # check if you have reac->wr->wp->prod like in habs
         connect_reac = np.array(list(barriers_en_S.keys()))[findreac]
         fromreac = [p[1] for p in connect_reac]
         connect_prod = np.array(list(barriers_en_S.keys()))[findprod]
         fromprod = [r[0] for r in connect_prod]
         possible_index = [(p, r) for p in fromreac for r in fromprod]
+        possible_index += [(reac, p) for p in fromprod]
+        possible_index += [(r, prod) for r in fromreac]
 
         flag = 0
+
         for idx in possible_index:
 
             try:
                 DE = barriers_en_S[idx]
+                # barriers like r=>wr=>wp=>p
                 DE_FW = DE - barriers_en_S[(idx[0], reac)]
                 DE_BW = barriers_en_S[(idx[1], idx[0])] - \
                     barriers_en_S[(idx[1], prod)]
                 flag = 1
             except (KeyError, ValueError):
-                continue
+                try:
+                    # barriers like r=>wr=>p
+                    # reacs=>wr
+                    DE_FW = barriers_en_S[(idx[0], prod)] - \
+                        barriers_en_S[(idx[0], reac)]
+
+                    DE_BW = DE_FW + barriers_en_S[(prod, idx[0])]
+                    flag = 1
+                except (KeyError, ValueError):
+                    continue
 
         if flag == 0:
             print(
@@ -321,7 +336,8 @@ def barriers(barriers_en_S, species_en_S, reac, prod):
                 DE_FW = species_en_S[prod] - species_en_S[reac]
                 DE_BW = species_en_S[reac] - species_en_S[prod]
             except KeyError:
-                print('*Error: species {} and {} not found. now exiting \n'.format(reac, prod))
+                print(
+                    '*Error: species {} and {} not found. now exiting \n'.format(reac, prod))
     else:
         print('*Error: species {} and {} not found'.format(reac, prod))
         exit()
