@@ -128,17 +128,17 @@ def plog(reaction, plog_param_dct, max_length=45, name_buffer=BUFFER):
 
     # Write the header for the reaction, which includes the 1-atm fit if avail
     if 1 in pressures:
-        if len(plog_param_dct[1]) > 1:
+        if len(plog_param_dct[1]) > 3:
             comment = (
                 'Duplicates exist at 1 atm (see below);' +
                 ' only single 1-atm fit is written')
             plog_str = _highp_str(
-                reaction, plog_param_dct[1][0], max_length=max_length,
+                reaction, plog_param_dct[1][:3], max_length=max_length,
                 name_buffer=name_buffer, inline_comment=comment)
         else:
             comment = 'Arrhenius parameters at 1 atm'
             plog_str = _highp_str(
-                reaction, plog_param_dct[1][0], max_length=max_length,
+                reaction, plog_param_dct[1], max_length=max_length,
                 name_buffer=name_buffer, inline_comment=comment
                 )
     else:
@@ -150,20 +150,19 @@ def plog(reaction, plog_param_dct, max_length=45, name_buffer=BUFFER):
     # Loop over each pressure
     for pressure in pressures:
         plog_params = plog_param_dct[pressure]
-        for param_set in plog_params:
-            assert len(param_set) % 3 == 0, (
-                f'Arr params should be a multiple of 3, is {len(param_set)}' +
-                f' for {reaction}'
-            )
+        assert len(plog_params) % 3 == 0, (
+            f'Arr params should be a multiple of 3, is {len(plog_params)}' +
+            f' for {reaction}'
+        )
 
-            # Loop over however many Arrhenius sets there are,
-            # writing a PLOG line for each
-            num_arr_sets = int(len(param_set)/3)
-            for idx in range(num_arr_sets):
-                current_param_set = param_set[3*idx:3*(idx+1)]
-                plog_str += _pressure_str(
-                    pressure, current_param_set,
-                    max_length=max_length, name_buffer=name_buffer)
+        # Loop over however many Arrhenius sets there are,
+        # writing a PLOG line for each
+        num_arr_sets = int(len(plog_params)/3)
+        for idx in range(num_arr_sets):
+            current_param_set = plog_params[3*idx:3*(idx+1)]
+            plog_str += _pressure_str(
+                pressure, current_param_set,
+                max_length=max_length, name_buffer=name_buffer)
 
     return plog_str
 

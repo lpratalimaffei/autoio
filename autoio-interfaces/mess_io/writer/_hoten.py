@@ -7,11 +7,6 @@ from ratefit.fit import arrhenius as arrfit
 #    ktp_dct, reaction, mess_path)
 # ktp_dct, rxn_name(str), fakepath, **kwargs
 
-DEFAULT_ARRFIT_DCT = {
-    'dbltol': 10000.0,
-    'dblcheck': 'max'
-}
-
 
 def rename_ktp_dct(ktp_dct, pedspecies, label_dct):
     """ rename ktp dictionary with rxn names
@@ -50,6 +45,6 @@ def fit_ktp_dct(ktp_dct, mess_path):
     for reaction in ktp_dct.keys():
 
         chemkin_str += arrfit.pes(
-            ktp_dct[reaction], reaction, mess_path, **DEFAULT_ARRFIT_DCT)
+            ktp_dct[reaction], reaction, mess_path, dbltol=10000.0)
 
     return chemkin_str

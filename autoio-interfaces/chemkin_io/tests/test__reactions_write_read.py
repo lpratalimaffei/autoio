@@ -155,3 +155,8 @@ def _get_strs(rxn_param_dct):
     second_str = writer(new_rxn_param_dct)
 
     return first_str, second_str
+
+test__dup_plog()
+#  test__dup_arrhenius()
+test__plog()
+#test__arrhenius()
