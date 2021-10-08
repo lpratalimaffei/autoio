@@ -69,26 +69,28 @@ def extract_hot_branching(hotenergies_str, hotspecies_lst, species_lst, T_lst, P
             for line in lines_block:
                 line = line.strip()
                 if line.startswith(hotspecies):
-                    branch_ratio_arr = np.array(
-                        [x for x in line.split()[2:]], dtype=float)
+                    hot_e = float(line.split()[1])
+                    if hot_e not in hot_e_lvl:
+                        branch_ratio_arr = np.array(
+                            [x for x in line.split()[2:]], dtype=float)
 
-                    # check that the value of the reactant branching is not negative
-                    # if > 1, keep it so you can account for that anyway
-                    if sp_i.size > 0:
-                        if branch_ratio_arr[sp_i] < 0:
+                        # check that the value of the reactant branching is not negative
+                        # if > 1, keep it so you can account for that anyway
+                        if sp_i.size > 0:
+                            if branch_ratio_arr[sp_i] < 0:
+                                continue
+                            elif branch_ratio_arr[sp_i] > 1:
+                                branch_ratio_arr[sp_i] = 1
+                        # remove negative values or values >1
+                        br_filter = np.array(
+                            [abs(x*int(x > 1e-5 and x <= 1)) for x in branch_ratio_arr], dtype=float)
+                        # if all invalid: do not save
+                        if all(br_filter == 0):
                             continue
-                        elif branch_ratio_arr[sp_i] > 1:
-                            branch_ratio_arr[sp_i] = 1
-                    # remove negative values or values >1
-                    br_filter = np.array(
-                        [abs(x*int(x > 1e-5 and x <= 1)) for x in branch_ratio_arr], dtype=float)
-                    # if all invalid: do not save
-                    if all(br_filter == 0):
-                        continue
-                    br_renorm = br_filter/np.sum(br_filter)
-                    # append values
-                    branch_ratio.append(br_renorm)
-                    hot_e_lvl.append(float(line.split()[1]))
+                        br_renorm = br_filter/np.sum(br_filter)
+                        # append values
+                        branch_ratio.append(br_renorm)
+                        hot_e_lvl.append(hot_e)
 
             hot_e_lvl = np.array(hot_e_lvl)
             branch_ratio = np.array(branch_ratio)
@@ -98,5 +100,4 @@ def extract_hot_branching(hotenergies_str, hotspecies_lst, species_lst, T_lst, P
                 0, index=hot_e_lvl, columns=species_lst)
             bf_hotspecies[species_BF_i] = branch_ratio
             hoten_dct[hotspecies][P][T] = bf_hotspecies
-            # print(hoten_dct)
     return hoten_dct

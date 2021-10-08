@@ -6,7 +6,36 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 from mess_io.reader import util
+from mess_io.reader import statmodels 
 
+def ped_prod1(ped_df, prod1, modeltype, dos_df=None, dof_info=None, E_BW=None):
+    """ call ped_models class in statmodels and compute P(E1)
+
+        :param ped_df: dataframe(columns:P, rows:T) with the Series of energy distrib
+        :type ped_df: dataframe(series(float))
+        :param dos_df: rovibr dos for each fragment
+        :type dos_df: dataframe(index=energy, columns=[frag1, frag2])
+        :param dof_dct: dct with dofs {prodi: Ni}
+        :type dof_dct: dct
+        :param dof_dct: dct with molecular weights {prodi: MWi}
+        :type dof_dct: dct
+        :param prod1: fragment of the energy distribution we want
+        :type prod1: str
+        :param E_BW: backward energy barrier TS-PRODS
+        :type E_BW: float
+        :param modeltype: type of model to be implemented
+        :type modeltype: str
+
+        :return P_E1_prod1: energy distribution of the product prod
+        :rtype: dataframe(series(float, index=energy), index=T, columns=P)
+    """
+
+    # call class
+    ped_prod1_fct = statmodels.ped_models(
+        ped_df, dos_df=dos_df, dof_info=dof_info, E_BW=E_BW, prod1=prod1)
+    P_E1_prod1 = ped_prod1_fct.compute_ped(modeltype)
+
+    return P_E1_prod1
 
 def ped_names(input_str):
     """ Reads the PEDSpecies and PEDOutput from the MESS input file string
@@ -59,8 +88,8 @@ def get_ped(pedoutput_str, species, energies):
     print(species_string)
     ped_lines = pedoutput_str.splitlines()
     # 0th of the energy: products energy
-    # E0 = energies[species[0]]-energies[species[1]]
-    E0 = energies[species[0]]
+    E0 = energies[species[0]]-energies[species[1]]
+    # E0 = energies[species[0]]
     # find where data of interest are
     pressure_i = util.where_in('pressure', ped_lines)
     temperature_i = util.where_in('temperature', ped_lines)

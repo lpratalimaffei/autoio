@@ -207,21 +207,21 @@ class ped_models:
         for P in self.ped_df.columns:
 
             P_E1_df = pd.DataFrame(
-                index=np.arange(0.0, round(Emax, 2), ped_step/10).round(
-                    decimals=2), columns=self.ped_df.sort_index().index, dtype=float)
+                index=np.arange(0.0, round(Emax, 3), ped_step/10).round(
+                    decimals=3), columns=self.ped_df.sort_index().index, dtype=float)
 
             for T in self.ped_df.sort_index().index:
                 E = self.ped_df[P][T].index
                 ped_E = self.ped_df[P][T].values
-                E1_vect = np.arange(0.0, round(max(E), 2), ped_step/10).round(
-                    decimals=2)
+                E1_vect = np.arange(0.0, round(max(E), 3), ped_step/10).round(
+                    decimals=3)
                 P_E1 = pd.Series(index=E1_vect[1:-1], dtype=float)
-
+                
                 for E1 in E1_vect[1:-1]:
                     P_E1E = norm_distr(E1, E, phi, self.E_BW)
                     P_E1Etot_P_ped = P_E1E*ped_E
                     P_E1[E1] = np.trapz(P_E1Etot_P_ped, E)
-
+                # print(P_E1,'\n',E1_vect)
                 norm_factor_P_E1 = np.trapz(
                     P_E1[E1_vect[1:-1]].values, x=E1_vect[1:-1])
                 P_E1_norm = P_E1/norm_factor_P_E1

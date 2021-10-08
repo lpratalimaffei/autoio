@@ -256,9 +256,9 @@ def energies(output_str):
                 sp, en = line.strip().split()[0:2]
                 species.append(sp)
                 species_en.append(float(en))
-
+    
     species_en_S = pd.Series(species_en, index=species)
-
+    print(species_en_S)
     for i in block_indexes:
         block = out_lines[i]
         lines = block.splitlines()
